@@ -1,15 +1,19 @@
-import React, {Component} from 'react';
-import ReactPaginate from 'react-paginate';
+import React, {
+  Component
+} from 'react';
 import './App.css';
 import base64 from 'base-64';
 
-class App extends Component {
+export default class App extends Component {
   constructor(props) {
     super(props);
-
+    this.loadPreviousData = this.loadPreviousData.bind(this);
+    this.loadNextData = this.loadNextData.bind(this);
     this.state = {
-      data: [],
-      offset: 0
+      dataAll: [],
+      url:'http://192.168.1.12:8080/ticketList?per_page=10&page=1',
+      per_page:10,
+      page:1
     }
   }
 
@@ -17,62 +21,58 @@ class App extends Component {
 
     let username = 'singh782@umn.edu/token';
     let password = 'jlPkPv2oLBBAEJjmppliDc2vAnqJaoNfwNxvFuPu';
-
-    let myHeaders = new Headers();
-    myHeaders.append('Authorization', 'Basic ' + base64.encode(username + ':' + password));
-    // console.log(base64.encode(username + ':' + password));
-
-    let request = new Request('http://192.168.1.12:8080/ticketList?per_page=2&page=5', {
+    console.log(this.state.url);
+    let request = new Request(this.state.url, {
       method: 'GET',
       headers: {
-        'Authorization': 'Basic c2luZ2g3ODJAdW1uLmVkdS90b2tlbjpqbFBrUHYyb0xCQkFFSmptcHBsaURjMnZBbnFKYW9OZndOeHZGdVB1',
+        'Authorization': 'Basic ' + base64.encode(username + ':' + password),
       },
-      mode: 'no-cors'
-
+      mode: 'cors'
     });
-    console.log("YO");
-    console.log(request);
-    fetch(request).then(function (data) {
-      console.log("HI");
-    })
+    fetch(request)
+      .then((resp) => resp.json())
+      .then(data => {
+        this.setState({
+          dataAll: data.tickets
+        });
+      })
       .catch(function (error) {
-        console.log("Error");
+        console.log("Error" + error);
       })
   }
-
+  loadPreviousData(){
+    let s = this.state.url;
+    let curr_page = parseInt(s.substr(s.indexOf('&page=') + 6, s.length-1));
+    let prev = curr_page - 1;
+    if(curr_page > 1){
+      s = s.substr(0, s.indexOf('&page=')+6) + prev;
+      this.setState({url:s});
+      this.loadData();
+    }
+  }
+  loadNextData(){
+    let s = this.state.url;
+    let curr_page = parseInt(s.substr(s.indexOf('&page=') + 6, s.length-1));
+    let next = curr_page + 1;
+    s = s.substr(0, s.indexOf('&page=')+6) + next;
+    this.setState({url:s});
+    this.loadData();
+  }
   componentDidMount() {
     this.loadData();
   }
-  handlePageClick = (data) => {
-    let selected = data.selected;
-    let offset = Math.ceil(selected * this.props.perPage);
-
-    this.setState({
-      offset: offset
-    }, () => {
-      this.loadCommentsFromServer();
-    });
-  };
   render() {
+    const ticks = this.state.dataAll;
+    const listItems = ticks.map((t) =>
+    <li key={t.id}>{t.description}</li>
+    );
     return (
+      
       <div>
-        {/* <CommentList data={this.state.data}/> */}
-        <ReactPaginate
-          previousLabel={"previous"}
-          nextLabel={"next"}
-          breakLabel={< a href = "" > ...</a>}
-          breakClassName={"break-me"}
-          pageCount={this.state.pageCount}
-          marginPagesDisplayed={2}
-          pageRangeDisplayed={5}
-          onPageChange={this.handlePageClick}
-          containerClassName={"pagination"}
-          subContainerClassName={"pages pagination"}
-          activeClassName={"active"}/>
+        <button onClick={this.loadPreviousData}>Previous</button>
+          <ul>{listItems}</ul>
+        <button onClick={this.loadNextData}>Next</button>
       </div>
     );
   }
 }
-
-// class CommentList extends Component {}
-export default App;
